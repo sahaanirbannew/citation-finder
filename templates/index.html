@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citation Finder</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="page">
+        <h1 class="title">Citation Finder.</h1>
+
+        <section class="input-panel">
+            <textarea id="case-description" class="description-input" placeholder="Describe the court case..."></textarea>
+            <button id="find-button" class="primary-button" type="button">Find Citation</button>
+        </section>
+
+        <section class="result-panel">
+            <div class="result-heading">Result:</div>
+            <div class="result-row">
+                <span class="label">IndianKanoon Link:</span>
+                <a id="indiankanoon-link" class="result-link" href="" target="_blank" rel="noreferrer">-</a>
+            </div>
+            <div class="result-row">
+                <span class="label">Indian Court Link:</span>
+                <a id="indian-court-link" class="result-link" href="" target="_blank" rel="noreferrer">-</a>
+            </div>
+            <div class="activity-row">
+                <span id="activity-dot" class="activity-dot idle"></span>
+                <span id="activity-text" class="activity-text">Waiting.</span>
+            </div>
+            <div id="elapsed-line" class="elapsed-line">Elapsed Time: 0.0s</div>
+            <div id="status-line" class="status-line">Idle.</div>
+        </section>
+
+        <button id="toggle-logs" class="logs-button" type="button">Check Logs</button>
+
+        <section id="logs-panel" class="logs-panel hidden">
+            <div class="logs-header">Debug Trace</div>
+            <pre id="logs-output" class="logs-output">No logs yet.</pre>
+        </section>
+    </main>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
