@@ -1,3 +1,9 @@
+"""
+agentic_app/scraper.py
+Program Purpose: Downloads standard HTTP judgments dynamically parsing text structures out of direct Court PDFs or Indian Kanoon HTML pages.
+Input: Valid urls strings matching allowed_domains.
+Output: Extractable plaintext via `ScrapedDocument` model structures.
+"""
 from __future__ import annotations
 
 from io import BytesIO

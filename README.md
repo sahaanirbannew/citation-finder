@@ -2,111 +2,42 @@
 
 Citation Finder is a FastAPI application that takes a text description of an Indian case, searches for the most likely judgment, scrapes the linked material, validates the match with Gemini, and returns only approved final links.
 
-It is built for Indian Kanoon and Indian court sources, with a debug-oriented UI that shows live progress, elapsed time, and the exact links being scraped.
+It uses the **Google Agent Development Kit (ADK)** to orchestrate a central **Citation Agent** (`LlmAgent`). 
+This agent uses various tools (like `search_indian_kanoon`, `search_google`, `resolve_fragment_and_scrape`, and `validate_match`) to dynamically plan and find the most accurate case link.
+
+It is built for Indian legal sources, with a debug-oriented UI that shows live progress, elapsed time, and the exact intermediate steps happening inside the ADK agent.
 
 ## What It Does
 
 1. Accepts a free-form case note or citation block.
-2. Extracts the case name from the first line.
-3. Extracts the court from the `Court:` field when available.
-4. Builds an Indian Kanoon query using `doctypes:` filtering when possible.
-5. Searches Indian Kanoon.
-6. Opens Indian Kanoon `docfragment` results and resolves them to full `/doc/<id>/` judgment links.
-7. Scrapes HTML judgments and Supreme Court PDF judgments.
-8. Validates the scraped content against the user’s description with Gemini.
-9. Returns the first validated final link and stops the remaining search as early as possible.
+2. An ADK `LlmAgent` is invoked in an `InMemorySessionService`.
+3. The agent formulates search queries.
+4. The agent uses tools to query Indian Kanoon or fallback to Google/SerpAPI.
+5. The agent uses tools to fetch and scrape html/pdf judgment text.
+6. The agent validates the text with a validation tool.
+7. Output terminates when a positive signal is given and the agent completes its run.
 
-## Final Link Rules
+### Example
 
-The app only returns a result if it matches one of these formats:
-
-- Indian Kanoon: `https://indiankanoon.org/doc/<unique_id>/`
-- Supreme Court PDF: `https://main.sci.gov.in/<folder/page/...>.pdf`
-
-Anything else may be visited during the crawl, but it will not be returned as the final answer.
-
-## Current Search Logic
-
-The retrieval logic is intentionally opinionated.
-
-If the input looks like:
-
+**Input:**
 ```text
 State of Haryana v. Bhajan Lal
 Court: Supreme Court of India
-Description: ...
-Why cited: ...
+Description: Laid down illustrative guidelines for quashing of FIR/criminal proceedings under Section 482 Cr.P.C. or Article 226 of the Constitution. Clause 7 states that where a criminal proceeding is manifestly attended with malafide and/or where the proceeding is maliciously instituted with an ulterior motive for wreaking vengeance on the accused, such proceedings can be quashed.
+Why cited: To argue that the criminal proceedings are an abuse of the process of law, initiated with an ulterior motive to harass the applicants in a civil land dispute. This supports the claim that the entire prosecution story is 'afterthought, concocted and fabricated'.
 ```
 
-the app first builds this kind of Indian Kanoon query:
-
-```text
-State of Haryana v. Bhajan Lal doctypes: supremecourt
-```
-
-Then it:
-
-1. searches Indian Kanoon
-2. takes the first filtered result seriously
-3. opens a `docfragment` page if needed
-4. extracts the linked full `/doc/<id>/` judgment page
-5. scrapes and validates that full page
-
-## Live UI Features
-
-The UI includes:
-
-- a large case-description input box
-- a result panel with Indian Kanoon and Indian Court links
-- a live activity indicator
-- an elapsed-time display
-- a log panel that shows only the links currently being scraped
-
-## Parallel Processing
-
-The crawler uses parallel workers for scraping and validation.
-
-- Multiple candidate URLs can be processed at the same time.
-- As soon as one valid final match is confirmed, the app signals the rest of the crawl to stop.
-- Pending work is cancelled where possible.
-- Requests already in the middle of network I/O may still finish, because Python cannot instantly terminate an in-flight socket call safely.
+**Outcome:** 
+The Citation Agent dynamically refines this free-form description into search queries. It evaluates candidate results against the text's emphasis on "quashing of FIR", "Article 226", and "Clause 7". Upon retrieving the correct text containing these exact criteria, the agent marks the search completely successful and returns the official Indian Kanoon or Supreme Court judgment link!
 
 ## Stack
 
 - FastAPI
-- Jinja2 templates
-- Vanilla JavaScript
-- Requests
-- BeautifulSoup
-- `pypdf`
-- Gemini API
-
-## Project Structure
-
-```text
-.
-├── .env
-├── .gitignore
-├── README.md
-├── DOCUMENTATION.md
-├── main.py
-├── requirements.txt
-├── static
-│   ├── script.js
-│   └── style.css
-├── templates
-│   └── index.html
-└── agentic_app
-    ├── __init__.py
-    ├── config.py
-    ├── gemini_client.py
-    ├── http.py
-    ├── job_manager.py
-    ├── models.py
-    ├── orchestrator.py
-    ├── scraper.py
-    └── search.py
-```
+- Vanilla JavaScript (for polling)
+- Python `google-adk` framework
+- Gemini API (`google-genai`)
+- SerpAPI (for Google Search)
+- `pypdf`, `BeautifulSoup`
 
 ## Setup
 
@@ -114,59 +45,28 @@ The crawler uses parallel workers for scraping and validation.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install google-adk
 ```
 
-The Gemini API key is stored in `.env`. Keep that file private.
+Ensure API keys are configured in your `.env` file:
+
+```env
+GEMINI_API_KEY="your-gemini-key"
+SERPAPI_KEY="your-srpapi-key"
+```
 
 ## Run
 
 ```bash
-cd "/Users/anirbansaha/Documents/citation finder"
 source .venv/bin/activate
 .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
 ```
-
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## API
 
-### Start a job
-
 `POST /api/find`
-
-Request body:
-
-```json
-{
-  "case_description": "State of Haryana v. Bhajan Lal\nCourt: Supreme Court of India\nDescription: ..."
-}
-```
-
-Response:
-
-```json
-{
-  "status": "accepted",
-  "job_id": "uuid",
-  "case_description": "..."
-}
-```
-
-### Poll job status
+Starts an asynchronous ADK session for the agent. Returns a `job_id`.
 
 `GET /api/find/{job_id}`
-
-Important fields in the response:
-
-- `status`
-- `elapsed_seconds`
-- `result`
-- `scrape_log_text`
-- `trace_events`
-
-## Notes
-
-- The visible log panel now shows only scrape links, not the entire internal trace.
-- The backend still keeps full structured trace events for debugging and future extension.
-- Supreme Court PDFs from `main.sci.gov.in` are parsed before validation.
-- Retry count for HTTP fetches is capped at `2`.
+Retrieves session updates from the ADK's `InMemorySessionService`, parsing out logs and checking for the final model `OutputSchema` (`CitationResult`).

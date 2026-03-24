@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citation Finder Google Search</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <main class="page">
+        <h1 class="title">Citation Finder.</h1>
+
+        <section class="input-panel">
+            <textarea id="gsearch-description" class="description-input" placeholder="Paste the case note..."></textarea>
+            <button id="gsearch-button" class="primary-button" type="button">Find Citation</button>
+        </section>
+
+        <section class="result-panel">
+            <div class="result-heading">Retrieved links:</div>
+            <div id="gsearch-match" class="status-line">Validated match: -</div>
+            <div id="gsearch-results" class="gsearch-results">
+                <div>A.</div>
+                <div>B.</div>
+                <div>C.</div>
+                <div>D.</div>
+                <div>E.</div>
+                <div>F.</div>
+                <div>G.</div>
+                <div>H.</div>
+                <div>I.</div>
+                <div>J.</div>
+            </div>
+            <div class="activity-row">
+                <span id="gsearch-activity-dot" class="activity-dot idle"></span>
+                <span id="gsearch-activity-text" class="activity-text">Waiting.</span>
+            </div>
+            <div id="gsearch-status-line" class="status-line">Idle.</div>
+        </section>
+
+        <button id="gsearch-toggle-logs" class="logs-button" type="button">Check Logs</button>
+
+        <section id="gsearch-logs-panel" class="logs-panel hidden">
+            <div class="logs-header">Google Search Logs</div>
+            <pre id="gsearch-logs-output" class="logs-output">No logs yet.</pre>
+        </section>
+    </main>
+
+    <script src="/static/gsearch.js"></script>
+</body>
+</html>

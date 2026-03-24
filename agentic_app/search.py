@@ -1,3 +1,9 @@
+"""
+agentic_app/search.py
+Program Purpose: Implements direct website crawling bindings against IndianKanoon.org, allowing extraction of standard judgments directly instead of API calls.
+Input: Free-text search phrases representing court arguments.
+Output: A python List containing custom parsed SearchCandidates metadata blocks.
+"""
 from __future__ import annotations
 
 import re

@@ -207,6 +207,11 @@ body {
     color: #10314d;
 }
 
+.gsearch-results {
+    display: grid;
+    gap: 6px;
+}
+
 .hidden {
     display: none;
 }
