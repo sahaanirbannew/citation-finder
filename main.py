@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from google.genai import types
 
 from agentic_app.config import Settings
@@ -167,3 +168,119 @@ async def get_citation_job(job_id: str) -> JSONResponse:
 async def google_search(request: Request, background_tasks: BackgroundTasks) -> JSONResponse:
     # Fallback to normal ADK search since it has google_search tool
     return await start_citation_job(request, background_tasks)
+
+class SyncSearchRequest(BaseModel):
+    input_text: str
+
+@app.post("/search")
+async def synchronous_search(payload: SyncSearchRequest) -> JSONResponse:
+    import uuid
+    import json
+    
+    case_description = payload.input_text.strip()
+    if not case_description:
+        return JSONResponse(status_code=400, content={"error": "input_text is required."})
+        
+    session_id = str(uuid.uuid4())
+    
+    try:
+        await session_service.create_session(
+            app_name="citation_finder",
+            user_id="api_client",
+            session_id=session_id
+        )
+        
+        final_result = None
+        
+        async for event in runner.run_async(
+            user_id="api_client",
+            session_id=session_id,
+            new_message=types.Content(role="user", parts=[types.Part(text=case_description)])
+        ):
+            if event.author == "citation_agent" and event.content and event.content.parts:
+                text = "".join(p.text for p in event.content.parts if p.text)
+                if "is_success" in text:
+                    try:
+                        cleaned = text.strip()
+                        if cleaned.startswith("```"):
+                            lines = cleaned.splitlines()
+                            if len(lines) >= 3:
+                                cleaned = "\n".join(lines[1:-1]).strip()
+                        data = json.loads(cleaned)
+                        if "is_success" in data:
+                            final_result = data
+                    except json.JSONDecodeError:
+                        pass
+        
+        if final_result and final_result.get("is_success"):
+            return JSONResponse(content={
+                "status": "success",
+                "citation_link": final_result.get("final_url", ""),
+                "rationale": final_result.get("rationale", "")
+            })
+        else:
+            return JSONResponse(content={
+                "status": "not_found",
+                "message": "Could not find a matching citation."
+            })
+            
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+class SyncSearchRequest(BaseModel):
+    input_text: str
+
+@app.post("/search")
+async def synchronous_search(payload: SyncSearchRequest) -> JSONResponse:
+    import uuid
+    import json
+    
+    case_description = payload.input_text.strip()
+    if not case_description:
+        return JSONResponse(status_code=400, content={"error": "input_text is required."})
+        
+    session_id = str(uuid.uuid4())
+    
+    try:
+        await session_service.create_session(
+            app_name="citation_finder",
+            user_id="api_client",
+            session_id=session_id
+        )
+        
+        final_result = None
+        
+        async for event in runner.run_async(
+            user_id="api_client",
+            session_id=session_id,
+            new_message=types.Content(role="user", parts=[types.Part(text=case_description)])
+        ):
+            if event.author == "citation_agent" and event.content and event.content.parts:
+                text = "".join(p.text for p in event.content.parts if p.text)
+                if "is_success" in text:
+                    try:
+                        cleaned = text.strip()
+                        if cleaned.startswith("```"):
+                            lines = cleaned.splitlines()
+                            if len(lines) >= 3:
+                                cleaned = "\n".join(lines[1:-1]).strip()
+                        data = json.loads(cleaned)
+                        if "is_success" in data:
+                            final_result = data
+                    except json.JSONDecodeError:
+                        pass
+        
+        if final_result and final_result.get("is_success"):
+            return JSONResponse(content={
+                "status": "success",
+                "citation_link": final_result.get("final_url", ""),
+                "rationale": final_result.get("rationale", "")
+            })
+        else:
+            return JSONResponse(content={
+                "status": "not_found",
+                "message": "Could not find a matching citation."
+            })
+            
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})

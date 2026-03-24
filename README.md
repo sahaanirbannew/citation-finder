@@ -70,3 +70,53 @@ Starts an asynchronous ADK session for the agent. Returns a `job_id`.
 
 `GET /api/find/{job_id}`
 Retrieves session updates from the ADK's `InMemorySessionService`, parsing out logs and checking for the final model `OutputSchema` (`CitationResult`).
+
+### Programmatic Synchronous Search (`POST /search`)
+
+Instead of asynchronous processing, external software or API clients can use this direct, fully synchronous endpoint. It holds the HTTP connection open until the Google ADK LLM finishes fetching and comprehensively evaluating citations.
+
+**Example Request (`POST /search`):**
+```json
+{
+  "input_text": "State of Haryana v. Bhajan Lal, Guidelines for quashing FIR"
+}
+```
+
+**Example Successful Response (HTTP 200):**
+```json
+{
+  "status": "success",
+  "citation_link": "https://indiankanoon.org/doc/1033637/",
+  "rationale": "Matches perfectly as it lays down illustrative guidelines for quashing..."
+}
+```
+
+**Example Unsuccessful Response (HTTP 200):**
+_(If the ADK Agent exhausts all options without finding a valid match)_
+```json
+{
+  "status": "not_found",
+  "message": "Could not find a matching citation."
+}
+```
+
+**Example Error Response (HTTP 400 or HTTP 500):**
+_(If the input is blank or the backend crashes)_
+```json
+{
+  "error": "input_text is required."
+}
+```
+
+**Python Usage Example:**
+```python
+import requests
+
+url = "http://127.0.0.1:8000/search"
+payload = {
+    "input_text": "State of Haryana v. Bhajan Lal, Guidelines for quashing FIR"
+}
+
+response = requests.post(url, json=payload)
+print(response.json())
+```
